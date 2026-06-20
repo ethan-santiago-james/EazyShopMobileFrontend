@@ -1,21 +1,58 @@
-import { View, TextInput, Button, Text, StyleSheet } from "react-native";
+import { ScrollView, View, TextInput, Button, Text, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useState } from "react";
+import Product from "../components/Product";
+import SearchResults from "./SearchResults";
+import { useSearch } from "../context/SearchContext";
+
+type Brand = {
+  brandId: number;
+  brandName: string;
+  products: typeof Product[];
+};
+
+type Store = {
+  storeId: number;
+  storeName: string;
+  products: typeof Product[];
+}
 
 export default function SearchProducts() {
   const [routeMode, setRouteMode] = useState("driving");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { brands, stores, setBrands, setStores } = useSearch();
 
+  const [categories, setCategories] = useState<string[]>([]);
+  const [searchedForProduct, setSearchedForProduct] = useState<boolean>(false);
+
+  const handleSearch = async () => {
+
+      const responseBrands = await fetch('http://localhost:3000/api/brands?search=' + searchQuery);
+      const dataBrands = await responseBrands.json();
+
+      setBrands(dataBrands);
+
+      const responseStores = await fetch('http://localhost:3000/api/stores?search=' + searchQuery);
+      const dataStores = await responseStores.json();
+
+      setStores(dataStores);
+      setSearchedForProduct(true);
+
+  }
+  
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.title}>Search Products</Text>
 
       <TextInput
         placeholder="Search products..."
         style={styles.input}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
       />
 
       <View style={styles.buttonSpacing}>
-        <Button title="Search" onPress={() => {}} />
+        <Button title="Search" onPress={handleSearch} />
       </View>
 
       <View style={styles.buttonSpacing}>
@@ -45,7 +82,16 @@ export default function SearchProducts() {
           onPress={() => {}}
         />
       </View>
-    </View>
+
+      {searchedForProduct && brands.length === 0 && stores.length === 0 && (
+        <Text>No results found for "{searchQuery}".</Text>
+      )}
+
+      {searchedForProduct && brands.length > 0 && stores.length > 0 && (
+        
+        <SearchResults numBrands={brands.length} numStores={stores.length} />
+      )}
+    </ScrollView>
   );
 }
 

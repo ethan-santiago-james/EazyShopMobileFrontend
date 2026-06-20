@@ -1,12 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import SearchProducts from './pages/SearchProducts';
+import { SearchProvider } from './context/SearchContext';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => {}}>
+    <SearchProvider>
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => {}}>
           <Text style={styles.title}>EazyShop</Text>
         </TouchableOpacity>
 
@@ -24,7 +26,9 @@ export default function App() {
       </View>
       <SearchProducts />
       <StatusBar style="auto" />
-    </View>
+      </View>
+    </SearchProvider>
+
   );
 }
 
