@@ -1,45 +1,242 @@
 import { ScrollView, View, TextInput, Button, Text, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { useState } from "react";
-import Product from "../components/Product";
+import { useEffect, useState } from "react";
 import SearchResults from "./SearchResults";
-import { useSearch } from "../context/SearchContext";
+import BrowseList from "../components/BrowseList";
+import ProductList from "../components/ProductList";
+import { ProductData, useSearch } from "../context/SearchContext";
+import {
+  normalizeBrands,
+  normalizeProducts,
+  normalizeStores,
+} from "../utils/normalize";
 
-type Brand = {
-  brandId: number;
-  brandName: string;
-  products: typeof Product[];
-};
-
-type Store = {
-  storeId: number;
-  storeName: string;
-  products: typeof Product[];
-}
+type ViewMode =
+  | "search"
+  | "brands"
+  | "stores"
+  | "all"
+  | "brand-products"
+  | "store-products";
 
 export default function SearchProducts() {
   const [routeMode, setRouteMode] = useState("driving");
-  const [searchQuery, setSearchQuery] = useState("");
-  const { brands, stores, setBrands, setStores } = useSearch();
+  const [localSearchQuery, setLocalSearchQuery] = useState("");
+  const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery } =
+    useSearch();
 
-  const [categories, setCategories] = useState<string[]>([]);
-  const [searchedForProduct, setSearchedForProduct] = useState<boolean>(false);
+  const [searchedForProduct, setSearchedForProduct] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("search");
+  const [selectedBrandId, setSelectedBrandId] = useState<number | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [allProducts, setAllProducts] = useState<ProductData[]>([]);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(false);
+  const [detailProducts, setDetailProducts] = useState<ProductData[]>([]);
+  const [loadingDetailProducts, setLoadingDetailProducts] = useState(false);
+
+  useEffect(() => {
+    if (viewMode !== "all") return;
+
+    let cancelled = false;
+    setLoadingAllProducts(true);
+
+    fetch(`http://localhost:3000/api/products?search=${searchQuery}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (cancelled) return;
+      
+        const products = normalizeProducts(data);
+        setAllProducts(products);
+      
+        setStores((prevStores) =>
+          prevStores.map((store: any) => ({
+            ...store,
+            searchedProductCount: products.filter(
+              (p) => p.storeName === store.storeName
+            ).length,
+          }))
+        );
+        console.log(stores);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingAllProducts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [viewMode, searchQuery]);
+
+  useEffect(() => {
+    if (viewMode === "brand-products" && selectedBrandId !== null) {
+      let cancelled = false;
+      setLoadingDetailProducts(true);
+
+      fetch(
+        `http://localhost:3000/api/productsforbrand?search=${searchQuery}&brandId=${selectedBrandId}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          if (!cancelled) setDetailProducts(normalizeProducts(data));
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingDetailProducts(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (viewMode === "store-products" && selectedStoreId !== null) {
+      let cancelled = false;
+      setLoadingDetailProducts(true);
+
+      fetch(
+        `http://localhost:3000/api/productsforstore?search=${searchQuery}&storeId=${selectedStoreId}`
+      )
+        .then((response) => response.json())
+        .then((data) => {
+          if (!cancelled) setDetailProducts(normalizeProducts(data));
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingDetailProducts(false);
+        });
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setDetailProducts([]);
+    return undefined;
+  }, [viewMode, selectedBrandId, selectedStoreId, searchQuery]);
 
   const handleSearch = async () => {
+    const responseBrands = await fetch(
+      "http://localhost:3000/api/brands?search=" + localSearchQuery
+    );
+    const dataBrands = await responseBrands.json();
+    setBrands(normalizeBrands(dataBrands));
 
-      const responseBrands = await fetch('http://localhost:3000/api/brands?search=' + searchQuery);
-      const dataBrands = await responseBrands.json();
+    const responseStores = await fetch(
+      "http://localhost:3000/api/stores?search=" + localSearchQuery
+    );
+    const dataStores = await responseStores.json();
+    setStores((prevStores) => normalizeStores(dataStores));
 
-      setBrands(dataBrands);
+    setSearchQuery(localSearchQuery);
+    setSearchedForProduct(true);
+    setViewMode("search");
+    setSelectedBrandId(null);
+    setSelectedStoreId(null);
+  };
 
-      const responseStores = await fetch('http://localhost:3000/api/stores?search=' + searchQuery);
-      const dataStores = await responseStores.json();
+  const backToSearch = () => {
+    setViewMode("search");
+    setSelectedBrandId(null);
+    setSelectedStoreId(null);
+  };
 
-      setStores(dataStores);
-      setSearchedForProduct(true);
-
+  if (viewMode === "brands") {
+    return (
+      <BrowseList
+        title={`Brands matching "${searchQuery}"`}
+        items={brands.map((brand) => ({
+          id: brand.brandId,
+          name: brand.brandName,
+          productCount: brand.products?.length ?? 0,
+        }))}
+        onSelect={(id) => {
+          setSelectedBrandId(id);
+          setViewMode("brand-products");
+        }}
+        onBack={backToSearch}
+      />
+    );
   }
-  
+
+  if (viewMode === "stores") {
+    return (
+      <BrowseList
+        title={`Stores with "${searchQuery}"`}
+        items={stores.map((store) => ({
+          id: store.storeId,
+          name: store.storeName,
+          productCount: store.products?.length ?? 0,
+        }))}
+        onSelect={(id) => {
+          setSelectedStoreId(id);
+          setViewMode("store-products");
+        }}
+        onBack={backToSearch}
+      />
+    );
+  }
+
+  if (viewMode === "all") {
+    if (loadingAllProducts) {
+      return (
+        <View style={styles.container}>
+          <Text>Loading products...</Text>
+          <View style={styles.buttonSpacing}>
+            <Button title="Back to Search" onPress={backToSearch} />
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <ProductList
+        title={`All products matching "${searchQuery}"`}
+        products={allProducts}
+        onBack={backToSearch}
+      />
+    );
+  }
+
+  if (viewMode === "brand-products" && selectedBrandId !== null) {
+    const brand = brands.find((b) => b.brandId === selectedBrandId);
+    if (loadingDetailProducts) {
+      return (
+        <View style={styles.container}>
+          <Text>Loading products...</Text>
+          <View style={styles.buttonSpacing}>
+            <Button title="Back" onPress={() => setViewMode("brands")} />
+          </View>
+        </View>
+      );
+    }
+    return (
+      <ProductList
+        title={brand ? `${brand.brandName} products` : "Brand products"}
+        products={detailProducts}
+        onBack={() => setViewMode("brands")}
+      />
+    );
+  }
+
+  if (viewMode === "store-products" && selectedStoreId !== null) {
+    const store = stores.find((s) => s.storeId === selectedStoreId);
+    if (loadingDetailProducts) {
+      return (
+        <View style={styles.container}>
+          <Text>Loading products...</Text>
+          <View style={styles.buttonSpacing}>
+            <Button title="Back" onPress={() => setViewMode("stores")} />
+          </View>
+        </View>
+      );
+    }
+    return (
+      <ProductList
+        title={store ? `${store.storeName} products` : "Store products"}
+        products={detailProducts}
+        onBack={() => setViewMode("stores")}
+      />
+    );
+  }
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Search Products</Text>
@@ -47,8 +244,8 @@ export default function SearchProducts() {
       <TextInput
         placeholder="Search products..."
         style={styles.input}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
+        value={localSearchQuery}
+        onChangeText={setLocalSearchQuery}
       />
 
       <View style={styles.buttonSpacing}>
@@ -77,19 +274,21 @@ export default function SearchProducts() {
       </View>
 
       <View style={styles.buttonSpacing}>
-        <Button
-          title="Generate Shopping Trip"
-          onPress={() => {}}
-        />
+        <Button title="Generate Shopping Trip" onPress={() => {}} />
       </View>
 
       {searchedForProduct && brands.length === 0 && stores.length === 0 && (
         <Text>No results found for "{searchQuery}".</Text>
       )}
 
-      {searchedForProduct && brands.length > 0 && stores.length > 0 && (
-        
-        <SearchResults numBrands={brands.length} numStores={stores.length} />
+      {searchedForProduct && (brands.length > 0 || stores.length > 0) && (
+        <SearchResults
+          numBrands={brands.length}
+          numStores={stores.length}
+          onViewAll={() => setViewMode("all")}
+          onViewStores={() => setViewMode("stores")}
+          onViewBrands={() => setViewMode("brands")}
+        />
       )}
     </ScrollView>
   );
