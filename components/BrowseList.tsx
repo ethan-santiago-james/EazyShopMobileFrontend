@@ -22,6 +22,8 @@ type Props = {
 };
 
 export default function BrowseList({ title, items, onSelect, onBack }: Props) {
+
+  
   return (
     <ScrollView
       style={styles.container}

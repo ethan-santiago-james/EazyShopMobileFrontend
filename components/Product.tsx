@@ -1,6 +1,7 @@
 import { View, Text, Image, StyleSheet } from "react-native";
 import AppButton from "./AppButton";
 import { colors, radii, spacing, shadows, typography } from "../constants/theme";
+import { useSearch } from "../context/SearchContext";
 
 type ProductProps = {
   productName: string;
@@ -18,7 +19,7 @@ export default function Product({
   storeName,
 }: ProductProps) {
   const formattedPrice = Number(price).toFixed(2);
-
+  const { addToCart } = useSearch();
   return (
     <View style={styles.card}>
       <Image
@@ -44,7 +45,7 @@ export default function Product({
         <AppButton
           title="Add to Cart"
           variant="accent"
-          onPress={() => {}}
+          onPress={() => addToCart({ productId: Date.now(), productName, price, quantity: 1, imageUrl, storeName })}
           style={styles.addButton}
         />
       </View>

@@ -21,7 +21,7 @@ export function normalizeBrand(raw: RawRecord): Brand {
   return {
     brandId: Number(raw.brandId ?? raw.brand_id),
     brandName: String(raw.brandName ?? raw.brand_name ?? ""),
-    products: Array.isArray(products) ? normalizeProducts(products) : [],
+    productCount: Number(raw.productCount ?? 0),
   };
 }
 
@@ -34,7 +34,9 @@ export function normalizeStore(raw: RawRecord): Store {
   return {
     storeId: Number(raw.storeId ?? raw.store_id),
     storeName: String(raw.storeName ?? raw.store_name ?? ""),
-    products: Array.isArray(products) ? normalizeProducts(products) : [],
+    productCount: Number(raw.productCount ?? 0),
+    latitude: Number(raw.latitude ?? 0),
+    longitude: Number(raw.longitude ?? 0),
   };
 }
 

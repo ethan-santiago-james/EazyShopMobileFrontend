@@ -5,6 +5,8 @@ import SearchResults from "./SearchResults";
 import BrowseList from "../components/BrowseList";
 import ProductList from "../components/ProductList";
 import { ProductData, useSearch } from "../context/SearchContext";
+import ShoppingCartModal from "../components/ShoppingCart";
+
 import {
   normalizeBrands,
   normalizeProducts,
@@ -22,7 +24,8 @@ type ViewMode =
 export default function SearchProducts() {
   const [routeMode, setRouteMode] = useState("driving");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
-  const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery } =
+  const [cartVisible, setCartVisible] = useState(false);
+  const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery, cartItems, clearCart } =
     useSearch();
 
   const [searchedForProduct, setSearchedForProduct] = useState(false);
@@ -33,6 +36,10 @@ export default function SearchProducts() {
   const [loadingAllProducts, setLoadingAllProducts] = useState(false);
   const [detailProducts, setDetailProducts] = useState<ProductData[]>([]);
   const [loadingDetailProducts, setLoadingDetailProducts] = useState(false);
+
+  function showShoppingCart() {
+    setCartVisible(true);
+  }
 
   useEffect(() => {
     if (viewMode !== "all") return;
@@ -56,7 +63,6 @@ export default function SearchProducts() {
             ).length,
           }))
         );
-        console.log(stores);
       })
       .finally(() => {
         if (!cancelled) setLoadingAllProducts(false);
@@ -123,6 +129,7 @@ export default function SearchProducts() {
       "http://localhost:3000/api/stores?search=" + localSearchQuery
     );
     const dataStores = await responseStores.json();
+    console.log("Fetched stores:", dataStores);
     setStores((prevStores) => normalizeStores(dataStores));
 
     setSearchQuery(localSearchQuery);
@@ -145,7 +152,7 @@ export default function SearchProducts() {
         items={brands.map((brand) => ({
           id: brand.brandId,
           name: brand.brandName,
-          productCount: brand.products?.length ?? 0,
+          productCount: brand.productCount || 0,
         }))}
         onSelect={(id) => {
           setSelectedBrandId(id);
@@ -157,13 +164,14 @@ export default function SearchProducts() {
   }
 
   if (viewMode === "stores") {
+    
     return (
       <BrowseList
         title={`Stores with "${searchQuery}"`}
         items={stores.map((store) => ({
           id: store.storeId,
           name: store.storeName,
-          productCount: store.products?.length ?? 0,
+          productCount: store.productCount || 0,
         }))}
         onSelect={(id) => {
           setSelectedStoreId(id);
@@ -238,59 +246,71 @@ export default function SearchProducts() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Search Products</Text>
 
-      <TextInput
-        placeholder="Search products..."
-        style={styles.input}
-        value={localSearchQuery}
-        onChangeText={setLocalSearchQuery}
-      />
+      <ScrollView style={styles.container}>
+        <Text style={styles.title}>Search Products</Text>
 
-      <View style={styles.buttonSpacing}>
-        <Button title="Search" onPress={handleSearch} />
-      </View>
-
-      <View style={styles.buttonSpacing}>
-        <Button title="View Shopping Cart" onPress={() => {}} />
-      </View>
-
-      <View style={styles.buttonSpacing}>
-        <Button title="Clear Cart" onPress={() => {}} />
-      </View>
-
-      <Text style={styles.label}>Route Type</Text>
-
-      <View style={styles.pickerContainer}>
-        <Picker
-          selectedValue={routeMode}
-          onValueChange={(itemValue) => setRouteMode(itemValue)}
-        >
-          <Picker.Item label="Driving" value="driving" />
-          <Picker.Item label="Walking" value="walking" />
-          <Picker.Item label="Cycling" value="cycling" />
-        </Picker>
-      </View>
-
-      <View style={styles.buttonSpacing}>
-        <Button title="Generate Shopping Trip" onPress={() => {}} />
-      </View>
-
-      {searchedForProduct && brands.length === 0 && stores.length === 0 && (
-        <Text>No results found for "{searchQuery}".</Text>
-      )}
-
-      {searchedForProduct && (brands.length > 0 || stores.length > 0) && (
-        <SearchResults
-          numBrands={brands.length}
-          numStores={stores.length}
-          onViewAll={() => setViewMode("all")}
-          onViewStores={() => setViewMode("stores")}
-          onViewBrands={() => setViewMode("brands")}
+        <TextInput
+          placeholder="Search products..."
+          style={styles.input}
+          value={localSearchQuery}
+          onChangeText={setLocalSearchQuery}
         />
-      )}
-    </ScrollView>
+
+        <View style={styles.buttonSpacing}>
+          <Button title="Search" onPress={handleSearch} />
+        </View>
+
+        <View style={styles.buttonSpacing}>
+          <Button
+            title={`View Shopping Cart (${cartItems.length})`}
+            onPress={showShoppingCart}
+          />
+        </View>
+
+        <View style={styles.buttonSpacing}>
+          <Button title="Clear Cart" onPress={clearCart} />
+        </View>
+
+        <Text style={styles.label}>Route Type</Text>
+
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={routeMode}
+            onValueChange={(itemValue) => setRouteMode(itemValue)}
+          >
+            <Picker.Item label="Driving" value="driving" />
+            <Picker.Item label="Walking" value="walking" />
+            <Picker.Item label="Cycling" value="cycling" />
+          </Picker>
+        </View>
+
+        <View style={styles.buttonSpacing}>
+          <Button title="Generate Shopping Trip" onPress={() => {}} />
+        </View>
+
+        {searchedForProduct && brands.length === 0 && stores.length === 0 && (
+          <Text>No results found for "{searchQuery}".</Text>
+        )}
+
+        {searchedForProduct && (brands.length > 0 || stores.length > 0) && (
+          <SearchResults
+            numBrands={brands.length}
+            numStores={stores.length}
+            onViewAll={() => setViewMode("all")}
+            onViewStores={() => setViewMode("stores")}
+            onViewBrands={() => setViewMode("brands")}
+          />
+        )}
+
+        <ShoppingCartModal
+          visible={cartVisible}
+          onClose={() => setCartVisible(false)}
+          items={cartItems}
+        />
+        
+      </ScrollView>
+      
   );
 }
 

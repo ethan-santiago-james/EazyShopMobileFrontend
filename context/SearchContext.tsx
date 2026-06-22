@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import * as Location from "expo-location";
 
 export type ProductData = {
   productName: string;
@@ -8,26 +9,50 @@ export type ProductData = {
   storeName: string;
 };
 
+export type UserLocation = {
+  latitude: number;
+  longitude: number;
+};
+
 export type Brand = {
   brandId: number;
   brandName: string;
-  products: ProductData[];
+  productCount?: number;
 };
 
 export type Store = {
   storeId: number;
   storeName: string;
-  products: ProductData[];
-  searchedProductCount?: number;
+  latitude: number;
+  longitude: number;
+  productCount?: number;
+};
+
+export type CartItem = {
+  productId: number;
+  productName: string;
+  price: number;
+  quantity: number;
+  imageUrl: string;
+  storeName: string;
 };
 
 type SearchContextType = {
   brands: Brand[];
   stores: Store[];
   searchQuery: string;
+  cartItems: CartItem[];
+  userLocation: UserLocation | null;
+
   setBrands: (brands: Brand[]) => void;
-  setStores: (stores: (prevStores: Store[]) => Store[]) => void;
+  setStores: React.Dispatch<React.SetStateAction<Store[]>>;
   setSearchQuery: (query: string) => void;
+
+  requestUserLocation: () => Promise<void>;
+
+  addToCart: (item: CartItem) => void;
+  removeFromCart: (productId: number) => void;
+  clearCart: () => void;
 };
 
 const SearchContext = createContext<SearchContextType | undefined>(undefined);
@@ -35,7 +60,70 @@ const SearchContext = createContext<SearchContextType | undefined>(undefined);
 export function SearchProvider({ children }: { children: ReactNode }) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [storesInCart, setStoresInCart] = useState<Store[]>([]);
+
+  const requestUserLocation = async () => {
+    const { status } =
+      await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      console.log("Location permission denied.");
+      return;
+    }
+
+    const location =
+      await Location.getCurrentPositionAsync({});
+
+    setUserLocation({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    });
+  };
+
+  const addToCart = (item: CartItem) => {
+    setCartItems(prev => {
+      const existing = prev.find(
+        p => p.productId === item.productId
+      );
+
+      if (existing) {
+        return prev.map(p =>
+          p.productId === item.productId
+            ? { ...p, quantity: p.quantity + 1 }
+            : p
+        );
+      }
+
+      return [...prev, item];
+    });
+
+     const store = stores.find(
+      s => s.storeName === item.storeName
+    );
+
+    if (store) {
+      setStoresInCart(prev => {
+        if (!prev.some(s => s.storeId === store.storeId)) {
+          return [...prev, store];
+        }
+
+        return prev;
+      });
+    }
+  };
+
+  const removeFromCart = (productId: number) => {
+    setCartItems(prev =>
+      prev.filter(item => item.productId !== productId)
+    );
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+  };
 
   return (
     <SearchContext.Provider
@@ -46,6 +134,12 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         setBrands,
         setStores,
         setSearchQuery,
+        cartItems,
+        addToCart,
+        removeFromCart,
+        clearCart,
+        userLocation,
+        requestUserLocation,
       }}
     >
       {children}
