@@ -1,8 +1,16 @@
 import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { useState } from "react";
 import Product from "./Product";
 import AppButton from "./AppButton";
 import { ProductData } from "../context/SearchContext";
 import { colors, spacing, typography } from "../constants/theme";
+import { Picker } from "@react-native-picker/picker";
+ 
+type SortOption =
+  | "price-asc"
+  | "price-desc"
+  | "store-asc"
+  | "store-desc";
 
 type Props = {
   title: string;
@@ -11,11 +19,43 @@ type Props = {
 };
 
 export default function ProductList({ title, products, onBack }: Props) {
+
+  const [sortOption, setSortOption] = useState<SortOption>("price-asc");
+
+  const sortedProducts = [...products].sort((a, b) => {
+    switch (sortOption) {
+      case "price-asc":
+        return a.price - b.price;
+
+      case "price-desc":
+        return b.price - a.price;
+
+      case "store-asc":
+        return a.storeName.localeCompare(b.storeName);
+
+      case "store-desc":
+        return b.storeName.localeCompare(a.storeName);
+
+      default:
+        return 0;
+    }
+  });
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
     >
+
+      <Picker
+        selectedValue={sortOption}
+        onValueChange={(value) => setSortOption(value)}
+      >
+        <Picker.Item label="Price: Low → High" value="price-asc" />
+        <Picker.Item label="Price: High → Low" value="price-desc" />
+        <Picker.Item label="Store: A → Z" value="store-asc" />
+        <Picker.Item label="Store: Z → A" value="store-desc" />
+      </Picker>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.count}>
         {products.length} product{products.length !== 1 ? "s" : ""} found
@@ -27,7 +67,7 @@ export default function ProductList({ title, products, onBack }: Props) {
         </View>
       )}
 
-      {products.map((product, index) => (
+      {sortedProducts.map((product, index) => (
         <View key={index} style={styles.productCard}>
           <Product
             productName={product.productName}

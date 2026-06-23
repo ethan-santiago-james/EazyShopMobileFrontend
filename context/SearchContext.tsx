@@ -37,18 +37,21 @@ export type CartItem = {
   storeName: string;
 };
 
+
 type SearchContextType = {
   brands: Brand[];
   stores: Store[];
   searchQuery: string;
   cartItems: CartItem[];
   userLocation: UserLocation | null;
+  storesInCart: Store[];
+  setStoresInCart: React.Dispatch<React.SetStateAction<Store[]>>;
 
   setBrands: (brands: Brand[]) => void;
   setStores: React.Dispatch<React.SetStateAction<Store[]>>;
   setSearchQuery: (query: string) => void;
 
-  requestUserLocation: () => Promise<void>;
+  requestUserLocation: () => Promise<UserLocation | null>;
 
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: number) => void;
@@ -65,22 +68,26 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [storesInCart, setStoresInCart] = useState<Store[]>([]);
 
-  const requestUserLocation = async () => {
+  const requestUserLocation = async (): Promise<UserLocation | null> =>{
     const { status } =
       await Location.requestForegroundPermissionsAsync();
 
     if (status !== "granted") {
       console.log("Location permission denied.");
-      return;
+      return null;
     }
 
-    const location =
-      await Location.getCurrentPositionAsync({});
+     const location = await Location.getCurrentPositionAsync({});
 
-    setUserLocation({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-    });
+      const userLoc = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      };
+
+      setUserLocation(userLoc);
+
+      return userLoc;
+
   };
 
   const addToCart = (item: CartItem) => {
@@ -140,6 +147,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         clearCart,
         userLocation,
         requestUserLocation,
+        storesInCart,
+        setStoresInCart,
       }}
     >
       {children}

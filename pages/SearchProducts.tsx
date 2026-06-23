@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import SearchResults from "./SearchResults";
 import BrowseList from "../components/BrowseList";
 import ProductList from "../components/ProductList";
-import { ProductData, useSearch } from "../context/SearchContext";
+import { ProductData, Store, useSearch } from "../context/SearchContext";
 import ShoppingCartModal from "../components/ShoppingCart";
 
 import {
@@ -25,8 +25,8 @@ export default function SearchProducts() {
   const [routeMode, setRouteMode] = useState("driving");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [cartVisible, setCartVisible] = useState(false);
-  const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery, cartItems, clearCart } =
-    useSearch();
+  const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery, cartItems, clearCart,
+    userLocation, requestUserLocation, storesInCart, setStoresInCart } = useSearch();
 
   const [searchedForProduct, setSearchedForProduct] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("search");
@@ -83,6 +83,7 @@ export default function SearchProducts() {
       )
         .then((response) => response.json())
         .then((data) => {
+          
           if (!cancelled) setDetailProducts(normalizeProducts(data));
         })
         .finally(() => {
@@ -129,7 +130,7 @@ export default function SearchProducts() {
       "http://localhost:3000/api/stores?search=" + localSearchQuery
     );
     const dataStores = await responseStores.json();
-    console.log("Fetched stores:", dataStores);
+    
     setStores((prevStores) => normalizeStores(dataStores));
 
     setSearchQuery(localSearchQuery);
@@ -138,6 +139,36 @@ export default function SearchProducts() {
     setSelectedBrandId(null);
     setSelectedStoreId(null);
   };
+
+  const handleGenerateShoppingTrip = async () => {
+
+    
+   const loc = await requestUserLocation();
+
+  const userStore: Store = {
+    storeId: -1,
+    storeName: "Current Location",
+    latitude: loc?.latitude || 0,
+    longitude: loc?.longitude || 0,
+  };
+
+  const updatedStores = [...storesInCart, userStore];
+  setStoresInCart(updatedStores);
+
+    const response = await fetch(
+      "http://localhost:3000/api/storestovisit",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          stores: updatedStores
+        }),
+      }
+    );
+
+  }
 
   const backToSearch = () => {
     setViewMode("search");
@@ -286,7 +317,7 @@ export default function SearchProducts() {
         </View>
 
         <View style={styles.buttonSpacing}>
-          <Button title="Generate Shopping Trip" onPress={() => {}} />
+          <Button title="Generate Shopping Trip" onPress={handleGenerateShoppingTrip} />
         </View>
 
         {searchedForProduct && brands.length === 0 && stores.length === 0 && (
