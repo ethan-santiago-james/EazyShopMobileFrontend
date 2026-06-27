@@ -6,6 +6,7 @@ import BrowseList from "../components/BrowseList";
 import ProductList from "../components/ProductList";
 import { ProductData, Store, useSearch } from "../context/SearchContext";
 import ShoppingCartModal from "../components/ShoppingCart";
+import Map from "../components/Map";
 
 import {
   normalizeBrands,
@@ -19,14 +20,21 @@ type ViewMode =
   | "stores"
   | "all"
   | "brand-products"
+  | "map"
   | "store-products";
+
+  
+type MapProps = {
+    shoppingRoute: any;
+    stores: Store[];
+};
 
 export default function SearchProducts() {
   const [routeMode, setRouteMode] = useState("driving");
   const [localSearchQuery, setLocalSearchQuery] = useState("");
   const [cartVisible, setCartVisible] = useState(false);
   const { brands, stores, setBrands, setStores, setSearchQuery, searchQuery, cartItems, clearCart,
-    userLocation, requestUserLocation, storesInCart, setStoresInCart } = useSearch();
+    userLocation, requestUserLocation, storesInCart, setStoresInCart, shoppingRoute, setShoppingRoute } = useSearch();
 
   const [searchedForProduct, setSearchedForProduct] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("search");
@@ -155,18 +163,39 @@ export default function SearchProducts() {
   const updatedStores = [...storesInCart, userStore];
   setStoresInCart(updatedStores);
 
-    const response = await fetch(
-      "http://localhost:3000/api/storestovisit",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          stores: updatedStores
-        }),
+    try {
+        
+        const response = await fetch(
+        "http://localhost:3000/api/storestovisit",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            stores: updatedStores
+          }),
+        }
+      );
+
+      const data = await response.json();
+      
+      const shortestRoute = [];
+
+      for (const storeId of data["path"]) {
+        const store = updatedStores.find((s) => s.storeId === storeId);
+        if (store) {
+          shortestRoute.push(store);
+        }
       }
-    );
+
+      setShoppingRoute(shortestRoute);
+      setViewMode("map");
+
+    } catch(error) {
+
+      console.error("Error generating shopping trip:", error);
+    }
 
   }
 
@@ -252,6 +281,13 @@ export default function SearchProducts() {
         products={detailProducts}
         onBack={() => setViewMode("brands")}
       />
+    );
+  }
+
+  if (viewMode === "map") {
+
+    return (
+      <Map shoppingRoute={shoppingRoute} />
     );
   }
 

@@ -67,6 +67,7 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [storesInCart, setStoresInCart] = useState<Store[]>([]);
+  const [shoppingRoute, setShoppingRoute] = useState<Store[]>([]);
 
   const requestUserLocation = async (): Promise<UserLocation | null> =>{
     const { status } =
@@ -149,6 +150,8 @@ export function SearchProvider({ children }: { children: ReactNode }) {
         requestUserLocation,
         storesInCart,
         setStoresInCart,
+        shoppingRoute,
+        setShoppingRoute,
       }}
     >
       {children}
