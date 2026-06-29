@@ -3,10 +3,6 @@ import { View } from "react-native";
 import { WebView } from "react-native-webview";
 import { Store } from "../context/SearchContext";
 
-type MapProps = {
-    shoppingRoute: any;
-    stores: Store[];
-};
 
 const html = `
 <!DOCTYPE html>
@@ -48,8 +44,7 @@ const html = `
 </html>
 `;
 
-export default function Map(shoppingRoute: Store[]) {
-
+export default function Map({ shoppingRoute }: { shoppingRoute: Store[] }) {
 
     return (
         <View style={{ flex: 1 }}>

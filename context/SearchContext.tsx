@@ -45,13 +45,16 @@ type SearchContextType = {
   cartItems: CartItem[];
   userLocation: UserLocation | null;
   storesInCart: Store[];
+  shoppingRoute: Store[];
   setStoresInCart: React.Dispatch<React.SetStateAction<Store[]>>;
 
   setBrands: (brands: Brand[]) => void;
   setStores: React.Dispatch<React.SetStateAction<Store[]>>;
   setSearchQuery: (query: string) => void;
+  setShoppingRoute: (query: Store[]) => void;
 
   requestUserLocation: () => Promise<UserLocation | null>;
+ 
 
   addToCart: (item: CartItem) => void;
   removeFromCart: (productId: number) => void;
@@ -69,27 +72,47 @@ export function SearchProvider({ children }: { children: ReactNode }) {
   const [storesInCart, setStoresInCart] = useState<Store[]>([]);
   const [shoppingRoute, setShoppingRoute] = useState<Store[]>([]);
 
-  const requestUserLocation = async (): Promise<UserLocation | null> =>{
-    const { status } =
-      await Location.requestForegroundPermissionsAsync();
 
-    if (status !== "granted") {
-      console.log("Location permission denied.");
-      return null;
-    }
+const requestUserLocation = async (): Promise<UserLocation | null> => {
+  const { status } = await Location.requestForegroundPermissionsAsync();
 
-     const location = await Location.getCurrentPositionAsync({});
+  if (status !== "granted") {
+    console.log("Location permission denied.");
+    return null;
+  }
 
+  try {
+    // Try fast cached location first (important on emulator)
+    const last = await Location.getLastKnownPositionAsync();
+
+    if (last) {
       const userLoc = {
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
+        latitude: last.coords.latitude,
+        longitude: last.coords.longitude,
       };
 
       setUserLocation(userLoc);
-
       return userLoc;
+    }
 
-  };
+    // fallback to live location
+    const location = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Balanced,
+    });
+
+    const userLoc = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    };
+
+    setUserLocation(userLoc);
+    return userLoc;
+
+  } catch (e) {
+    console.log("Location error:", e);
+    return null;
+  }
+};
 
   const addToCart = (item: CartItem) => {
     setCartItems(prev => {
