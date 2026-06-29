@@ -289,7 +289,10 @@ export default function SearchProducts() {
   if (viewMode === "map") {
 
     return (
-      <Map shoppingRoute={shoppingRoute} />
+      <Map 
+      shoppingRoute={shoppingRoute} 
+      setViewMode={setViewMode}
+      />
     );
   }
 
