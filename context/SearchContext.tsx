@@ -154,6 +154,7 @@ const requestUserLocation = async (): Promise<UserLocation | null> => {
 
   const clearCart = () => {
     setCartItems([]);
+    setStoresInCart([]);
   };
 
   return (

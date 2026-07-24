@@ -55,7 +55,7 @@ export default function SearchProducts() {
     let cancelled = false;
     setLoadingAllProducts(true);
 
-    fetch(`http://192.168.1.132:3000/api/products?search=${searchQuery}`)
+    fetch(`http://10.156.104.43:3000/api/products?search=${searchQuery}`)
       .then((response) => response.json())
       .then((data) => {
         if (cancelled) return;
@@ -87,7 +87,7 @@ export default function SearchProducts() {
       setLoadingDetailProducts(true);
 
       fetch(
-        `http://192.168.1.132:3000/api/productsforbrand?search=${searchQuery}&brandId=${selectedBrandId}`
+        `http://10.156.104.43:3000/api/productsforbrand?search=${searchQuery}&brandId=${selectedBrandId}`
       )
         .then((response) => response.json())
         .then((data) => {
@@ -108,7 +108,7 @@ export default function SearchProducts() {
       setLoadingDetailProducts(true);
 
       fetch(
-        `http://192.168.1.132:3000/api/productsforstore?search=${searchQuery}&storeId=${selectedStoreId}`
+        `http://10.156.104.43:3000/api/productsforstore?search=${searchQuery}&storeId=${selectedStoreId}`
       )
         .then((response) => response.json())
         .then((data) => {
@@ -129,13 +129,13 @@ export default function SearchProducts() {
 
   const handleSearch = async () => {
     const responseBrands = await fetch(
-      "http://192.168.1.132:3000/api/brands?search=" + localSearchQuery
+      "http://10.156.104.43:3000/api/brands?search=" + localSearchQuery
     );
     const dataBrands = await responseBrands.json();
     setBrands(normalizeBrands(dataBrands));
 
     const responseStores = await fetch(
-      "http://192.168.1.132:3000/api/stores?search=" + localSearchQuery
+      "http://10.156.104.43:3000/api/stores?search=" + localSearchQuery
     );
     const dataStores = await responseStores.json();
     
@@ -166,7 +166,7 @@ export default function SearchProducts() {
     try {
         
         const response = await fetch(
-        "http://192.168.1.132:3000/api/storestovisit",
+        "http://10.156.104.43:3000/api/storestovisit",
         {
           method: "POST",
           headers: {
@@ -179,12 +179,12 @@ export default function SearchProducts() {
       );
 
       const data = await response.json();
-      console.log("Data: " + data)
+      
       const shortestRoute = [];
 
       for (const storeId of data["path"]) {
         const store = updatedStores.find((s) => s.storeId === storeId);
-        console.log("Store in shortest path: " + store)
+        
         if (store) {
           shortestRoute.push(store);
         }
@@ -288,10 +288,12 @@ export default function SearchProducts() {
 
   if (viewMode === "map") {
 
+
     return (
       <Map 
       shoppingRoute={shoppingRoute} 
       setViewMode={setViewMode}
+      routeMode={routeMode}
       />
     );
   }
@@ -352,8 +354,8 @@ export default function SearchProducts() {
             onValueChange={(itemValue) => setRouteMode(itemValue)}
           >
             <Picker.Item label="Driving" value="driving" />
-            <Picker.Item label="Walking" value="walking" />
-            <Picker.Item label="Cycling" value="cycling" />
+            <Picker.Item label="Walking" value="foot" />
+            <Picker.Item label="Cycling" value="bike" />
           </Picker>
         </View>
 

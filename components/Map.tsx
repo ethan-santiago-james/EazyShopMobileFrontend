@@ -15,23 +15,25 @@
     type Props = {
       shoppingRoute: Store[];
       setViewMode: React.Dispatch<React.SetStateAction<ViewMode>>;
+      routeMode: string;
   };
 
-  export default function Map({ shoppingRoute, setViewMode }: Props ) {
+  export default function Map({ shoppingRoute, setViewMode, routeMode }: Props ) {
 
+    console.log("Shopping Route Mode: " + routeMode)
       const html = `
   <!DOCTYPE html>
   <html>
   <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <link
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<link
   rel="stylesheet"
   href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css"
 />
-
 <script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
   <style>
   #map { height:100vh; width:100%; margin:0; }
@@ -56,10 +58,14 @@
           .addTo(map)
           .bindPopup(\`<b>\${s.storeName}</b>\`);
   });
-  L.Routing.control({
+  const control = L.Routing.control({
     waypoints: shoppingRoute.map(
         s => L.latLng(s.latitude, s.longitude)
     ),
+    router: L.Routing.osrmv1({
+        serviceUrl: 'https://router.project-osrm.org/route/v1',
+        profile: '${routeMode}',
+    }),
     routeWhileDragging: false,
     addWaypoints: false,
     draggableWaypoints: false,
@@ -67,40 +73,48 @@
     show: false
 }).addTo(map);
 
-  map.fitBounds(route.getBounds());
 
   </script>
   </body>
   </html>
   `;
 
-      return (
-          <View style={{ flex: 1 }}>
-              <WebView source={{ html }} />
+    return (
+        <View style={{ flex: 1 }}>
+            <WebView source={{ html }} />
 
-              <Pressable
-                  style={styles.backButton}
-                  onPress={() => setViewMode("search")}
-              >
-                  <Text style={styles.backText}>← Back</Text>
-              </Pressable>
-          </View>
-      );
+            <Pressable
+                style={styles.backButton}
+                onPress={() => setViewMode("search")}
+            >
+                <Text style={styles.backText}>← Back</Text>
+            </Pressable>
+        </View>
+    );
   }
 
   const styles = StyleSheet.create({
-    backButton: {
+        backButton: {
         position: "absolute",
-        top: 50,
+        bottom: 30,
         left: 20,
+        right: 20,
+        padding: 15,
+        borderRadius: 10,
+        alignItems: "center",
         backgroundColor: "white",
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        borderRadius: 8,
-        elevation: 4,
+        elevation: 5, // Android shadow
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        shadowOffset: {
+            width: 0,
+            height: 2
+        }
     },
+
     backText: {
         fontSize: 16,
-        fontWeight: "600",
-    },
+        fontWeight: "bold"
+    }
 });
