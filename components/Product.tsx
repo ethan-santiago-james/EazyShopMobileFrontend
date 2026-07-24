@@ -11,6 +11,7 @@ type ProductProps = {
   storeName: string;
 };
 
+
 export default function Product({
   productName,
   description,
@@ -94,9 +95,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
     lineHeight: 18,
   },
-  storeBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: colors.background,
+    storeBadge: {
+      alignSelf: "flex-start",
+      backgroundColor: colors.background,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: radii.full,

@@ -1,4 +1,4 @@
-import { ScrollView, View, TextInput, Button, Text, StyleSheet } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, View, TextInput, Button, Text, StyleSheet } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useEffect, useState } from "react";
 import SearchResults from "./SearchResults";
@@ -44,6 +44,7 @@ export default function SearchProducts() {
   const [loadingAllProducts, setLoadingAllProducts] = useState(false);
   const [detailProducts, setDetailProducts] = useState<ProductData[]>([]);
   const [loadingDetailProducts, setLoadingDetailProducts] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   function showShoppingCart() {
     setCartVisible(true);
@@ -128,39 +129,53 @@ export default function SearchProducts() {
   }, [viewMode, selectedBrandId, selectedStoreId, searchQuery]);
 
   const handleSearch = async () => {
-    const responseBrands = await fetch(
-      "http://10.156.104.43:3000/api/brands?search=" + localSearchQuery
-    );
-    const dataBrands = await responseBrands.json();
-    setBrands(normalizeBrands(dataBrands));
+    setIsSearching(true);
 
-    const responseStores = await fetch(
-      "http://10.156.104.43:3000/api/stores?search=" + localSearchQuery
-    );
-    const dataStores = await responseStores.json();
-    
-    setStores((prevStores) => normalizeStores(dataStores));
+    try {
+      const responseBrands = await fetch(
+        "http://10.156.104.43:3000/api/brands?search=" + localSearchQuery
+      );
+      const dataBrands = await responseBrands.json();
+      setBrands(normalizeBrands(dataBrands));
 
-    setSearchQuery(localSearchQuery);
-    setSearchedForProduct(true);
-    setViewMode("search");
-    setSelectedBrandId(null);
-    setSelectedStoreId(null);
+      const responseStores = await fetch(
+        "http://10.156.104.43:3000/api/stores?search=" + localSearchQuery
+      );
+      const dataStores = await responseStores.json();
+      
+      setStores(normalizeStores(dataStores));
+      setSearchQuery(localSearchQuery);
+      setSearchedForProduct(true);
+      setViewMode("search");
+      setSelectedBrandId(null);
+      setSelectedStoreId(null);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const handleGenerateShoppingTrip = async () => {
-
-    
    const loc = await requestUserLocation();
+
+   if (!loc) {
+    Alert.alert(
+      "Location unavailable",
+      "Allow location access before generating a shopping trip."
+    );
+    return;
+   }
 
   const userStore: Store = {
     storeId: -1,
     storeName: "Current Location",
-    latitude: loc?.latitude || 0,
-    longitude: loc?.longitude || 0,
+    latitude: loc.latitude,
+    longitude: loc.longitude,
   };
 
-  const updatedStores = [...storesInCart, userStore];
+  const updatedStores = [
+    ...storesInCart.filter((store) => store.storeId !== -1),
+    userStore,
+  ];
   setStoresInCart(updatedStores);
 
     try {
@@ -179,17 +194,29 @@ export default function SearchProducts() {
       );
 
       const data = await response.json();
-      
-      const shortestRoute = [];
 
-      for (const storeId of data["path"]) {
+      if (!response.ok || !Array.isArray(data.path)) {
+        throw new Error("The route service returned an invalid route.");
+      }
+
+      const routeStoreIds = [
+        -1,
+        ...data.path.map(Number).filter((storeId: number) => storeId !== -1),
+        -1,
+      ];
+      const shortestRoute: Store[] = [];
+
+      for (const storeId of routeStoreIds) {
         const store = updatedStores.find((s) => s.storeId === storeId);
         
         if (store) {
           shortestRoute.push(store);
         }
       }
-      
+
+      if (shortestRoute.length < 2) {
+        throw new Error("No stores were available to route to.");
+      }
 
       setShoppingRoute(shortestRoute);
       setViewMode("map");
@@ -332,8 +359,19 @@ export default function SearchProducts() {
         />
 
         <View style={styles.buttonSpacing}>
-          <Button title="Search" onPress={handleSearch} />
+          <Button
+            title={isSearching ? "Searching..." : "Search"}
+            onPress={handleSearch}
+            disabled={isSearching}
+          />
         </View>
+
+        {isSearching && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3498db" />
+            <Text style={styles.loadingText}>Searching for products...</Text>
+          </View>
+        )}
 
         <View style={styles.buttonSpacing}>
           <Button
@@ -423,5 +461,13 @@ const styles = StyleSheet.create({
   },
   buttonSpacing: {
     marginBottom: 12,
+  },
+  loadingContainer: {
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: "#555",
   },
 });
