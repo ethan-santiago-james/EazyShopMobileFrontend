@@ -2,6 +2,12 @@
 
 EazyShopMobile is an Expo/React Native student project for comparing mock grocery prices, creating a shopping list, and viewing an efficient route between selected stores. The data shown in the app is mock data; it does not represent live retailer prices or chains.
 
+## Link To Backend Repository
+
+https://github.com/ethan-santiago-james/EazyShopMobileBackend
+
+This is required so that you can run the backend service that this frontend repo uses for its functionality
+
 ## Requirements
 
 - [Node.js](https://nodejs.org/) **20.19 or later** (Expo SDK 56 requirement)
